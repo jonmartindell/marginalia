@@ -69,6 +69,12 @@ module Marginalia
         end
       end
 
+      if defined? ActiveRecord::ConnectionAdapters::SQLServerAdapter
+        ActiveRecord::ConnectionAdapters::SQLServerAdapter.module_eval do
+          include Marginalia::ActiveRecordInstrumentation
+        end
+      end
+
       if defined? ActiveRecord::ConnectionAdapters::SQLite3Adapter
         ActiveRecord::ConnectionAdapters::SQLite3Adapter.module_eval do
           include Marginalia::ActiveRecordInstrumentation

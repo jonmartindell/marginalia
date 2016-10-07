@@ -36,6 +36,25 @@ module Marginalia
             alias_method :exec_update, :exec_update_with_marginalia
           end
         end
+
+        is_mssql = defined?(ActiveRecord::ConnectionAdapters::SQLServerAdapter) &&
+          ActiveRecord::ConnectionAdapters::SQLServerAdapter == instrumented_class
+        # Instrument exec_delete and exec_update on AR 3.2+, since they don't
+        # call execute internally
+        if is_mssql && ActiveRecord::VERSION::STRING > "3.1"
+          if instrumented_class.method_defined?(:exec_delete)
+            alias_method :exec_delete_without_marginalia, :exec_delete
+            alias_method :exec_delete, :exec_delete_with_marginalia
+          end
+          if instrumented_class.method_defined?(:exec_insert)
+            alias_method :exec_insert_without_marginalia, :exec_insert
+            alias_method :exec_insert, :exec_insert_with_marginalia
+          end
+          if instrumented_class.method_defined?(:exec_update)
+            alias_method :exec_update_without_marginalia, :exec_update
+            alias_method :exec_update, :exec_update_with_marginalia
+          end
+        end
       end
     end
 
@@ -52,8 +71,8 @@ module Marginalia
       execute_without_marginalia(annotate_sql(sql), name)
     end
 
-    def exec_query_with_marginalia(sql, name = 'SQL', binds = [])
-      exec_query_without_marginalia(annotate_sql(sql), name, binds)
+    def exec_query_with_marginalia(sql, name = 'SQL', binds = [], *others)
+      exec_query_without_marginalia(annotate_sql(sql), *others.unshift(name, binds))
     end
 
     if ActiveRecord::VERSION::MAJOR >= 5
@@ -65,6 +84,10 @@ module Marginalia
 
     def exec_delete_with_marginalia(sql, name = 'SQL', binds = [])
       exec_delete_without_marginalia(annotate_sql(sql), name, binds)
+    end
+
+    def exec_insert_with_marginalia(sql, name = 'SQL', binds = [], _pk = nil, _sequence_name = nil)
+      exec_insert_without_marginalia(annotate_sql(sql), name, binds, _pk, _sequence_name)
     end
 
     def exec_update_with_marginalia(sql, name = 'SQL', binds = [])
